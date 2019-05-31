@@ -1,0 +1,177 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
+
+from xml.dom import minidom
+
+from . import Graph
+from . import Node
+from . import Edge
+from collections import defaultdict
+
+class GraphMLParser:
+    """
+    """
+
+    def __init__(self):
+        """
+        """
+
+    def write(self, graph, fname):
+        """
+        """
+
+        doc = minidom.Document()
+
+        root = doc.createElement('graphml')
+        doc.appendChild(root)
+
+        # Add attributs
+        for a in graph.get_attributs():
+            attr_node = doc.createElement('key')
+            attr_node.setAttribute('id', a.name)
+            attr_node.setAttribute('attr.name', a.name)
+            attr_node.setAttribute('attr.type', a.type)
+            root.appendChild(attr_node)
+
+        graph_node = doc.createElement('graph')
+        graph_node.setAttribute('id', graph.name)
+        if graph.directed:
+            graph_node.setAttribute('edgedefault', 'directed')
+        else:
+            graph_node.setAttribute('edgedefault', 'undirected')
+        root.appendChild(graph_node)
+
+        # Add nodes
+        for n in graph.nodes():
+
+            node = doc.createElement('node')
+            node.setAttribute('id', n['label'])
+            for a in n.attributes():
+                if a != 'label':
+                    data = doc.createElement('data')
+                    data.setAttribute('key', a)
+                    data.appendChild(doc.createTextNode(str(n[a])))
+                    node.appendChild(data)
+            graph_node.appendChild(node)
+
+        # Add edges
+        for e in graph.edges():
+
+            edge = doc.createElement('edge')
+            edge.setAttribute('source', e.node1['label'])
+            edge.setAttribute('target', e.node2['label'])
+            if e.directed() != graph.directed:
+                edge.setAttribute('directed', 'true' if e.directed() else 'false')
+            for a in e.attributes():
+                if e != 'label':
+                    data = doc.createElement('data')
+                    data.setAttribute('key', a)
+                    data.appendChild(doc.createTextNode(e[a]))
+                    edge.appendChild(data)
+            graph_node.appendChild(edge)
+
+        f = open(fname, 'w')
+        f.write(doc.toprettyxml(indent = '    '))
+
+#    def parsepoint(self, fname):
+#        dom = minidom.parse(open(fname, 'r'))
+#        root = dom.getElementsByTagName("graphml")[0]
+#        graph = root.getElementsByTagName("graph")[0]
+#        name = graph.getAttribute('id')
+#        
+#        gr = Graph(name)
+#        # # Get attributes
+#        # attributes = []
+#        # for attr in root.getElementsByTagName("key"):
+#        #     attributes.append(attr)
+#        
+#        # Get longitute and latitute
+#        nodel = defaultdict(list)
+#        for node in graph.getElementsByTagName("node"):
+#            nodel[node.getAttribute('id')] = node.getElementsByTagName("data")[1].firstChild.nodeValue, node.getElementsByTagName("data")[4].firstChild.nodeValue
+#        return gr
+
+    def parse(self, fname):
+        """
+        """
+
+        dom = minidom.parse(open(fname, 'r'))
+        root = dom.getElementsByTagName("graphml")[0]
+        graph = root.getElementsByTagName("graph")[0]
+        name = graph.getAttribute('id')
+
+        g = Graph(name)
+
+        # # Get attributes
+        # attributes = []
+        # for attr in root.getElementsByTagName("key"):
+        #     attributes.append(attr)
+
+        # Get latitude and longitude
+        lon = 0;  lat = 0;
+        for r in root.getElementsByTagName("key"):
+            if r.getAttribute("attr.name") == 'Longitude' and lon == 0:
+                Longitude = r.getAttribute("id")
+                Lon = 1
+            elif r.getAttribute("attr.name") == 'Latitude' and lat == 0:
+                Latitude = r.getAttribute("id")
+                lat = 1
+        
+        # Get nodes and coordinates
+        nodel = defaultdict(list)
+        for node in graph.getElementsByTagName("node"):
+            n = g.add_node(node.getAttribute('id'))
+            node_ = node.getAttribute('id')
+
+            for attr in node.getElementsByTagName("data"):
+                if attr.firstChild:
+                    n[attr.getAttribute("key")] = attr.firstChild.data
+                else:
+                    n[attr.getAttribute("key")] = ""
+                
+            Lat = n[Latitude]
+            Lon = n[Longitude]
+            if Lat != None or Lon != None:
+                nodel[int(node_)] = (float(Lat), float(Lon))
+            else:
+                del n
+
+        # Get edges
+        for edge in graph.getElementsByTagName("edge"):
+            source = edge.getAttribute('source')
+            dest = edge.getAttribute('target')
+            if int(source) not in nodel or int(dest) not in nodel:
+                continue
+            
+            e = g.add_edge_by_label(source, dest)
+
+            for attr in edge.getElementsByTagName("data"):
+                if attr.firstChild:
+                    e[attr.getAttribute("key")] = attr.firstChild.data
+                else:
+                    e[attr.getAttribute("key")] = ""
+    
+        # Get latitude and longitude
+#        nodel = defaultdict(list)
+#        for node in graph.getElementsByTagName("node"):
+#            try:
+#                nodel[node.getAttribute('id')] = float(node.getElementsByTagName("data")[1].firstChild.nodeValue), float(node.getElementsByTagName("data")[4].firstChild.nodeValue)
+#            except IndexError:
+#                nodel[node.getAttribute('id')] = 0, 0
+        
+        return g, nodel
+
+
+if __name__ == '__main__':
+
+    parser = GraphMLParser()
+    g = parser.parse('test.graphml')
+
+    g.show(True)
+
+
