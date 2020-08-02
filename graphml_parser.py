@@ -78,24 +78,6 @@ class GraphMLParser:
         f = open(fname, 'w')
         f.write(doc.toprettyxml(indent = '    '))
 
-#    def parsepoint(self, fname):
-#        dom = minidom.parse(open(fname, 'r'))
-#        root = dom.getElementsByTagName("graphml")[0]
-#        graph = root.getElementsByTagName("graph")[0]
-#        name = graph.getAttribute('id')
-#        
-#        gr = Graph(name)
-#        # # Get attributes
-#        # attributes = []
-#        # for attr in root.getElementsByTagName("key"):
-#        #     attributes.append(attr)
-#        
-#        # Get longitute and latitute
-#        nodel = defaultdict(list)
-#        for node in graph.getElementsByTagName("node"):
-#            nodel[node.getAttribute('id')] = node.getElementsByTagName("data")[1].firstChild.nodeValue, node.getElementsByTagName("data")[4].firstChild.nodeValue
-#        return gr
-
     def parse(self, fname):
         """
         """
@@ -107,22 +89,15 @@ class GraphMLParser:
 
         g = Graph(name)
 
-        # # Get attributes
-        # attributes = []
-        # for attr in root.getElementsByTagName("key"):
-        #     attributes.append(attr)
-
         # Get latitude and longitude
-        lon = 0;  lat = 0;
         for r in root.getElementsByTagName("key"):
-            if r.getAttribute("attr.name") == 'Longitude' and lon == 0:
+            if r.getAttribute("attr.name") == 'Longitude':
                 Longitude = r.getAttribute("id")
-                Lon = 1
-            elif r.getAttribute("attr.name") == 'Latitude' and lat == 0:
+                
+            elif r.getAttribute("attr.name") == 'Latitude':
                 Latitude = r.getAttribute("id")
-                lat = 1
         
-        # Get nodes and coordinates
+        # Get nodes and their coordinates
         nodel = defaultdict(list)
         for node in graph.getElementsByTagName("node"):
             n = g.add_node(node.getAttribute('id'))
@@ -155,14 +130,6 @@ class GraphMLParser:
                     e[attr.getAttribute("key")] = attr.firstChild.data
                 else:
                     e[attr.getAttribute("key")] = ""
-    
-        # Get latitude and longitude
-#        nodel = defaultdict(list)
-#        for node in graph.getElementsByTagName("node"):
-#            try:
-#                nodel[node.getAttribute('id')] = float(node.getElementsByTagName("data")[1].firstChild.nodeValue), float(node.getElementsByTagName("data")[4].firstChild.nodeValue)
-#            except IndexError:
-#                nodel[node.getAttribute('id')] = 0, 0
         
         return g, nodel
 
@@ -173,5 +140,4 @@ if __name__ == '__main__':
     g = parser.parse('test.graphml')
 
     g.show(True)
-
-
+    
